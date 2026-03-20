@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  oracle:
+    image: gvenzl/oracle-free:23-slim
+    container_name: oracle-free
+    environment:
+      ORACLE_PASSWORD: OraclePwd_2025
+      APP_USER: VECTOR
+      APP_USER_PASSWORD: VectorPwd_2025
+    ports:
+      - "1521:1521"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 20s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+
+  workshop:
+    image: mcr.microsoft.com/devcontainers/python:3.11
+    volumes:
+      - ..:/workspace:cached
+    depends_on:
+      oracle:
+        condition: service_healthy
+    command: sleep infinity
+    environment:
+      ORACLE_DSN: oracle:1521/FREEPDB1
+      ORACLE_USER: VECTOR
+      ORACLE_PASSWORD: VectorPwd_2025
+
+volumes:
+  oracle-data:

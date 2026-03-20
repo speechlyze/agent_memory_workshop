@@ -1,0 +1,46 @@
+{
+  "name": "Oracle Agent Memory Workshop",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workshop",
+  "workspaceFolder": "/workspace",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true"
+    }
+  },
+
+  "forwardPorts": [1521, 8888],
+  "portsAttributes": {
+    "1521": { "label": "Oracle DB", "onAutoForward": "silent" },
+    "8888": { "label": "Jupyter", "onAutoForward": "openBrowser" }
+  },
+
+  "postCreateCommand": "bash /workspace/.devcontainer/setup.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "oracle.oracle-developer-tools-for-vscode"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "jupyter.notebookFileRoot": "/workspace/workshop",
+        "notebook.cellToolbarLocation": {
+          "default": "right"
+        }
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "ORACLE_DSN": "oracle:1521/FREEPDB1",
+    "ORACLE_USER": "VECTOR",
+    "ORACLE_PASSWORD": "VectorPwd_2025"
+  }
+}
