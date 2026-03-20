@@ -18,6 +18,7 @@
   },
 
   "postCreateCommand": "bash /workspace/.devcontainer/setup.sh",
+  "postStartCommand": "docker compose -f /workspace/.devcontainer/docker-compose.yml up -d oracle",
 
   "customizations": {
     "vscode": {
@@ -39,7 +40,7 @@
   },
 
   "remoteEnv": {
-    "ORACLE_DSN": "oracle:1521/FREEPDB1",
+    "ORACLE_DSN": "localhost:1521/FREEPDB1",
     "ORACLE_USER": "VECTOR",
     "ORACLE_PASSWORD": "VectorPwd_2025"
   }

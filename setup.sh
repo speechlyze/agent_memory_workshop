@@ -34,7 +34,7 @@ for i in 1 2 3 4 5; do
   python3 -c "
 import oracledb
 try:
-    c = oracledb.connect(user='VECTOR', password='VectorPwd_2025', dsn='oracle:1521/FREEPDB1')
+    c = oracledb.connect(user='VECTOR', password='VectorPwd_2025', dsn='localhost:1521/FREEPDB1')
     print('Oracle AI Database 23ai is ready. Version:', c.version)
     c.close()
     exit(0)

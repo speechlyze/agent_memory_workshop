@@ -26,17 +26,30 @@ A complete agent memory system with all major memory types, a `MemoryManager` ab
 ### Option A: GitHub Codespaces (recommended for the workshop)
 
 1. Click the **Open in GitHub Codespaces** badge above
-2. Wait for the environment to build (~3-5 minutes — Oracle AI Database is starting)
-3. Open `workshop/notebook_student.ipynb` in the file explorer
-4. Select the **Oracle Agent Memory Workshop** kernel from the top-right kernel picker
-5. Follow the notebook cells top to bottom, using the part guides in `docs/` when you hit a TODO
+2. Wait for the environment to build (~3-5 minutes)
+3. Once the terminal prompt appears, start Oracle AI Database:
+   ```bash
+   docker compose -f .devcontainer/docker-compose.yml up -d oracle
+   ```
+4. Wait for Oracle to become healthy (~60-90 seconds), then verify:
+   ```bash
+   docker ps
+   ```
+   You should see `(healthy)` in the STATUS column for the `oracle-free` container.
+5. Confirm the Python connection works:
+   ```bash
+   python3 -c "import oracledb; c = oracledb.connect(user='VECTOR', password='VectorPwd_2025', dsn='localhost:1521/FREEPDB1'); print('Connected. Oracle version:', c.version); c.close()"
+   ```
+6. Open `workshop/notebook_student.ipynb` in the file explorer
+7. Select the **Oracle Agent Memory Workshop** kernel from the top-right kernel picker
+8. Follow the notebook cells top to bottom, using the part guides in `docs/` when you hit a TODO
 
 You will need:
 - A GitHub account (free)
 - An OpenAI API key
 - A Tavily API key (free at [tavily.com](https://tavily.com))
 
-Oracle AI Database 23ai starts automatically inside the Codespace. No local installation required.
+> **Note:** On subsequent Codespace opens, Oracle should start automatically via `postStartCommand`. If you ever see a connection error in the notebook, run step 3 above again from the terminal.
 
 ### Option B: Local development
 
@@ -48,9 +61,7 @@ cd agent-memory-workshop
 docker compose -f .devcontainer/docker-compose.yml up -d oracle
 
 # Install dependencies
-pip install langchain-oracledb==0.2.0 sentence-transformers langchain-openai \
-  langchain langchain-community tavily-python datasets oracledb openai \
-  jupyter ipykernel matplotlib tiktoken
+pip install -r requirements.txt
 
 # Launch Jupyter
 jupyter lab workshop/notebook_student.ipynb

@@ -35,7 +35,7 @@ You will connect as the `VECTOR` user for all workshop tasks. This is a dedicate
 oracledb.connect(
     user="VECTOR",
     password="VectorPwd_2025",
-    dsn="oracle:1521/FREEPDB1"
+    dsn="localhost:1521/FREEPDB1"
 )
 ```
 
@@ -48,7 +48,7 @@ import oracledb
 import time
 
 def connect_to_oracle(max_retries=3, retry_delay=5, user="sys", password="OraclePwd_2025",
-                      dsn="oracle:1521/FREEPDB1", program="workshop"):
+                      dsn="localhost:1521/FREEPDB1", program="workshop"):
     for attempt in range(1, max_retries + 1):
         try:
             print(f"Connection attempt {attempt}/{max_retries}...")
@@ -80,7 +80,7 @@ After defining the function, the notebook connects as `VECTOR`:
 vector_conn = connect_to_oracle(
     user="VECTOR",
     password="VectorPwd_2025",
-    dsn="oracle:1521/FREEPDB1",
+    dsn="localhost:1521/FREEPDB1",
     program="devrel.hub.memory_engineering",
 )
 ```
