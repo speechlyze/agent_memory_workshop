@@ -35,7 +35,7 @@ A complete agent memory system with all major memory types, a `MemoryManager` ab
    > **Tip:** If your browser prompts you to allow clipboard pasting, click **Allow** so you can paste commands into the terminal.
 
    ```bash
-   docker compose -f docker-compose.yml up -d oracle
+   docker compose -f .devcontainer/docker-compose.yml up -d oracle
    ```
 
    ![Oracle getting pulled](images/oracle_getting_pulled.png)
@@ -56,7 +56,7 @@ A complete agent memory system with all major memory types, a `MemoryManager` ab
    ![Database ready](images/database_ready.png)
 
 6. Open [`workshop/notebook_student.ipynb`](workshop/notebook_student.ipynb) in the file explorer
-7. Select the **Oracle Agent Memory Workshop** kernel from the top-right kernel picker
+7. Select the **Python 3** kernel from the top-right kernel picker
 8. Follow the notebook cells top to bottom, using the part guides in `docs/` when you hit a TODO
 
 You will need:
@@ -73,7 +73,7 @@ git clone https://github.com/YOUR-ORG/agent-memory-workshop
 cd agent-memory-workshop
 
 # Start Oracle AI Database
-docker compose -f docker-compose.yml up -d oracle
+docker compose -f .devcontainer/docker-compose.yml up -d oracle
 
 # Install dependencies
 pip install -r requirements.txt

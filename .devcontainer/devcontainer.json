@@ -18,7 +18,7 @@
   },
 
   "postCreateCommand": "bash /workspace/.devcontainer/setup.sh",
-  "postStartCommand": "docker compose -f /workspace/.devcontainer/docker-compose.yml up -d oracle",
+  "postStartCommand": "docker compose -f /workspace/.devcontainer/docker-compose.yml start oracle || docker compose -f /workspace/.devcontainer/docker-compose.yml up -d oracle",
 
   "customizations": {
     "vscode": {

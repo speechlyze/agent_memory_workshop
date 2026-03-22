@@ -10,6 +10,7 @@ tavily-python
 datasets
 jupyter
 ipykernel
+ipywidgets
 matplotlib
 tiktoken
 pydantic
