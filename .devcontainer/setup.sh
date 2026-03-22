@@ -44,17 +44,12 @@ except Exception:
 done
 
 echo ""
-echo "[4/5] Configuring vector memory pool and restarting Oracle..."
-docker exec oracle-free sqlplus -s sys/OraclePwd_2025@localhost:1521/FREE as sysdba << 'SQLEOF'
-ALTER SYSTEM SET vector_memory_size = 1G SCOPE=SPFILE;
-SHUTDOWN IMMEDIATE;
-STARTUP;
-EXIT;
-SQLEOF
+echo "[4/5] Configuring vector memory pool (512M) and restarting Oracle..."
+docker exec oracle-free bash -c "echo \"ALTER SYSTEM SET vector_memory_size=512M SCOPE=SPFILE;\" | sqlplus -s sys/OraclePwd_2025@localhost:1521/FREE as sysdba"
+docker restart oracle-free
 
 echo "  Waiting for Oracle to restart..."
-sleep 30
-for i in $(seq 1 10); do
+for i in $(seq 1 15); do
   python3 -c "
 import oracledb
 try:
@@ -64,7 +59,7 @@ try:
     exit(0)
 except Exception:
     exit(1)
-" && break || echo "  Attempt $i/10 — waiting 15s..." && sleep 15
+" && break || echo "  Attempt $i/15 — waiting 15s..." && sleep 15
 done
 
 echo ""
