@@ -16,20 +16,6 @@ services:
       start_period: 120s
     volumes:
       - oracle-data:/opt/oracle/oradata
-      - ./oracle-init:/container-entrypoint-initdb.d
-
-  workshop:
-    image: mcr.microsoft.com/devcontainers/python:3.11
-    volumes:
-      - ..:/workspace:cached
-    depends_on:
-      oracle:
-        condition: service_healthy
-    command: sleep infinity
-    environment:
-      ORACLE_DSN: localhost:1521/FREEPDB1
-      ORACLE_USER: VECTOR
-      ORACLE_PASSWORD: VectorPwd_2025
 
 volumes:
   oracle-data:

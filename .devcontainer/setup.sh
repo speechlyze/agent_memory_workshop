@@ -27,7 +27,7 @@ pip install -qU \
 
 echo ""
 echo "[2/5] Starting Oracle AI Database..."
-docker compose -f /workspace/.devcontainer/docker-compose.yml up -d oracle
+docker compose -f .devcontainer/docker-compose.yml up -d oracle
 
 echo ""
 echo "[3/5] Waiting for Oracle initial startup (~90 seconds)..."

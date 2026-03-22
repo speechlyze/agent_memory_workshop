@@ -1,8 +1,6 @@
 {
   "name": "Oracle Agent Memory Workshop",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "workshop",
-  "workspaceFolder": "/workspace",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
@@ -11,14 +9,13 @@
     }
   },
 
-  "forwardPorts": [1521, 8888],
+  "forwardPorts": [1521],
   "portsAttributes": {
-    "1521": { "label": "Oracle DB", "onAutoForward": "silent" },
-    "8888": { "label": "Jupyter", "onAutoForward": "openBrowser" }
+    "1521": { "label": "Oracle DB", "onAutoForward": "silent" }
   },
 
-  "postCreateCommand": "bash /workspace/.devcontainer/setup.sh",
-  "postStartCommand": "docker compose -f /workspace/.devcontainer/docker-compose.yml start oracle || docker compose -f /workspace/.devcontainer/docker-compose.yml up -d oracle",
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml start oracle 2>/dev/null || docker compose -f .devcontainer/docker-compose.yml up -d oracle",
 
   "customizations": {
     "vscode": {
@@ -26,15 +23,11 @@
         "ms-python.python",
         "ms-toolsai.jupyter",
         "ms-toolsai.jupyter-keymap",
-        "ms-toolsai.jupyter-renderers",
-        "oracle.oracle-developer-tools-for-vscode"
+        "ms-toolsai.jupyter-renderers"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "jupyter.notebookFileRoot": "/workspace/workshop",
-        "notebook.cellToolbarLocation": {
-          "default": "right"
-        }
+        "jupyter.notebookFileRoot": "${containerWorkspaceFolder}/workshop"
       }
     }
   },
