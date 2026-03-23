@@ -20,7 +20,7 @@
 
   "onCreateCommand": "bash .devcontainer/setup_build.sh",
   "postCreateCommand": "bash .devcontainer/setup_runtime.sh",
-  "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml start oracle 2>/dev/null || docker compose -f .devcontainer/docker-compose.yml up -d oracle",
+  "postStartCommand": "bash .devcontainer/start_oracle.sh",
 
   "customizations": {
     "vscode": {
