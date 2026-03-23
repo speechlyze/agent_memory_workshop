@@ -147,3 +147,82 @@ Getting this boundary wrong in either direction causes problems:
 **`ORA-00942: table or view does not exist`** — The conversational memory table was not created. Re-run the `create_conversational_history_table` cell.
 
 **`ORA-01408: such column list already indexed`** — An HNSW index already exists on this table from a prior run. The `safe_create_index` helper handles this. If you see it outside that helper, check the index name for a typo.
+
+---
+
+## MemoryManager TODO Methods
+
+The `MemoryManager` class has four methods left for you to implement. Each one teaches a different pattern — SQL insert, vector add, structured vector add with metadata, and direct entity storage.
+
+---
+
+### TODO 1: `write_conversational_memory` — SQL INSERT
+
+This is the foundational SQL write. Every user and assistant message gets written here programmatically on each turn.
+
+```python
+def write_conversational_memory(self, content: str, role: str, thread_id: str) -> str:
+    thread_id = str(thread_id)
+    with self.conn.cursor() as cur:
+        id_var = cur.var(str)
+        cur.execute(f"""
+            INSERT INTO {self.conversation_table} (thread_id, role, content, metadata, timestamp)
+            VALUES (:thread_id, :role, :content, :metadata, CURRENT_TIMESTAMP)
+            RETURNING id INTO :id
+        """, {"thread_id": thread_id, "role": role, "content": content, "metadata": "{}", "id": id_var})
+        record_id = id_var.getvalue()[0] if id_var.getvalue() else None
+    self.conn.commit()
+    return record_id
+```
+
+**Key concept:** `RETURNING id INTO :id` is Oracle's way of capturing an auto-generated value from an INSERT in a single round trip. `cur.var(str)` creates an output bind variable that Oracle writes the new ID into.
+
+---
+
+### TODO 2: `write_knowledge_base` — Vector Add
+
+This is the simplest vector write — pass text and metadata directly to OracleVS which handles embedding and insertion.
+
+```python
+def write_knowledge_base(self, text: str, metadata: dict):
+    self.knowledge_base_vs.add_texts([text], [metadata])
+```
+
+**Key concept:** Both arguments must be lists even when adding a single document. OracleVS batches the embedding calls, so the list interface keeps the API consistent whether you add 1 or 1,000 documents.
+
+---
+
+### TODO 3: `write_workflow` — Structured Vector Add
+
+Workflow memory requires structuring the data before storing it — the steps list needs formatting and the metadata needs computing before the vector write.
+
+```python
+def write_workflow(self, query: str, steps: list, final_answer: str, success: bool = True):
+    steps_text = "\n".join([f"Step {i+1}: {s}" for i, s in enumerate(steps)])
+    text = f"Query: {query}\nSteps:\n{steps_text}\nAnswer: {final_answer[:200]}"
+    metadata = {
+        "query": query,
+        "success": success,
+        "num_steps": len(steps),
+        "timestamp": datetime.now().isoformat()
+    }
+    self.workflow_vs.add_texts([text], [metadata])
+```
+
+**Key concept:** The `num_steps` metadata field enables filtered retrieval — `read_workflow` uses `filter={"num_steps": {"$gt": 0}}` to exclude empty workflows. Storing computable fields as metadata is the pattern that makes filtered vector search useful.
+
+---
+
+### TODO 4: `write_entity` — Direct Entity Storage
+
+The direct storage branch (no LLM extraction) stores a single named entity as a vector alongside its metadata.
+
+```python
+# else branch — direct storage
+self.entity_vs.add_texts(
+    [f"{name} ({entity_type}): {description}"],
+    [{"name": name, "type": entity_type, "description": description}]
+)
+```
+
+**Key concept:** The text format `"Name (TYPE): description"` is deliberate — embedding the type into the text means semantic searches like "find a database system" will surface entities of type SYSTEM, because the word "system" is part of the embedded string.

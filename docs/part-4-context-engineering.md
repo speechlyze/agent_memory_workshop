@@ -92,3 +92,42 @@ Cell 84 plots context window usage across agent iterations. After completing the
 **`calculate_context_usage` returns `None`** — Your function is missing the `return` statement. Make sure you return the dict.
 
 **`KeyError` on `MODEL_TOKEN_LIMITS`** — Check the model name string. The dict uses specific keys like `"gpt-5"`. The function defaults to 128,000 for unknown models, so this should not raise — check if you accidentally removed the `.get()` default.
+
+---
+
+## TODO: Write the Summarisation Prompt
+
+This is the most open-ended TODO in the workshop. The prompt you write directly determines the quality of what gets stored in summary memory — and therefore what the agent can recall later.
+
+**What makes a good summarisation prompt:**
+
+A poor prompt produces a vague paragraph. A good prompt produces a structured, faithful, retrievable snapshot. The key constraints are:
+- **Bullet points** force conciseness — prose summaries are harder to scan and embed less distinctly
+- **Faithfulness** — the agent must not hallucinate facts into a summary that gets stored as ground truth
+- **Specific entities** — paper titles, arXiv IDs, and author names must survive compression or the agent loses traceability
+- **Next actions** — preserving unresolved questions means the agent can pick up where it left off across sessions
+
+**Complete solution:**
+
+```python
+summary_prompt = f"""
+You are compressing an AI agent context window for later retrieval.
+The content may include conversation memory, retrieved papers, entities, workflows, and prior summaries.
+
+Produce a compact summary that preserves:
+- user goal and constraints
+- key facts/findings already established
+- important entities (paper titles, arXiv IDs, authors)
+- unresolved questions and next actions
+
+Output 4-7 short bullet points.
+Be faithful to the source, and do not add new facts.
+
+Context window content:
+{content[:3000]}
+""".strip()
+```
+
+**Why `content[:3000]`?** At the point summarisation is triggered, the context may already be large. Truncating to 3,000 characters prevents the summarisation call itself from exceeding the model's token limit — you are compressing because the context is large, so you cannot afford to send all of it.
+
+**What happens after the prompt:** The function makes two LLM calls — one to produce the bullet-point summary, and one to generate a short label (max 12 words) used as the summary's description in Oracle. The description is what appears in `read_summary_context` so the agent can decide whether to expand a summary without fetching its full content.

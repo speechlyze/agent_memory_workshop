@@ -1,12 +1,68 @@
 # Part 6: Agent Execution
 
-## No TODOs — Read and Run
+## Two TODOs in This Part
 
-Part 6 contains no incomplete cells. The agent harness is fully implemented. Your job in this part is to:
+Part 6 has two TODOs — both inside `call_agent()`. Complete them in order before running the agent.
 
-1. Read through `call_agent()` to understand how all previous parts connect
-2. Run the agent and observe its behaviour
-3. Run the naive comparison and understand what changes
+---
+
+## TODO 1: `build_context()`
+
+This is the most important function in the entire workshop. It assembles everything you built across Parts 1-5 into a single string that gets sent to the LLM on every inference call.
+
+**Complete solution:**
+
+```python
+def build_context() -> str:
+    ctx = f"# Question\n{query}\n\n"
+    ctx += memory_manager.read_conversational_memory(thread_id) + "\n\n"
+    ctx += memory_manager.read_knowledge_base(query) + "\n\n"
+    ctx += memory_manager.read_workflow(query) + "\n\n"
+    ctx += memory_manager.read_entity(query) + "\n\n"
+    ctx += memory_manager.read_summary_context(query) + "\n\n"
+    return ctx
+```
+
+**Why this order matters:** The LLM reads the context top to bottom. The current question comes first so the model always knows what it is answering. Conversational memory follows — the most immediately relevant context. Knowledge base, workflow, and entity memory provide supporting detail. Summary context comes last because it is the least dense — just reference pointers the agent can choose to expand if needed.
+
+**Why it is rebuilt on every iteration:** Memory state changes during the tool-call loop. After a web search, new content is written to the knowledge base. After a summarisation, the conversational memory shrinks. Rebuilding from scratch ensures the LLM always sees the current state of memory, not a stale snapshot from the start of the turn.
+
+---
+
+## TODO 2: Five Questions Before the Memory Recall Test
+
+The final test cell asks the agent `"What was my first question to you"`. For this to work, the agent needs prior conversational memory to recall — which means you need to ask it questions first.
+
+Your task is to add 5 `call_agent()` calls using the same `thread_id="0022"` before the recall question. All 6 calls form a single thread of conversation that the agent accumulates in memory.
+
+**Why the same thread_id matters:** Every read and write in the `MemoryManager` is scoped to `thread_id`. If you use different thread IDs, each call starts with an empty memory slate and the recall question will always fail. Using the same ID across all 6 calls is what builds the conversation the agent needs to remember.
+
+**Choosing good questions:** Pick questions that demonstrate different memory types in action:
+
+| Question type | Memory type it exercises |
+|---|---|
+| "Find papers about X" | Knowledge base, entity memory |
+| "What did we just discuss?" | Conversational memory |
+| "Search the web for Y" | Tavily tool, knowledge base write |
+| "Summarise everything so far" | Summary memory, context compaction |
+| "Tell me more about Z" | Workflow memory, entity memory |
+
+**Example solution** (use your own questions — the content matters for the comparison chart):
+
+```python
+call_agent("Find me research papers about reinforcement learning for robotics", thread_id="0022")
+call_agent("What were the main themes in those papers?", thread_id="0022")
+call_agent("Search the web for recent advances in robot locomotion in 2025", thread_id="0022")
+call_agent("Which authors appear most frequently in this research area?", thread_id="0022")
+call_agent("Summarise everything we have discussed so far", thread_id="0022")
+
+# Final question — tests whether conversational memory is working correctly
+call_agent("What was my first question to you", thread_id="0022")
+```
+
+The agent should correctly recall your first question. If it cannot, check that all calls used the same `thread_id` and that `write_conversational_memory` was correctly implemented in Part 3.
+
+---
 
 ## The Agent Harness Architecture
 
@@ -18,7 +74,7 @@ Part 6 contains no incomplete cells. The agent harness is fully implemented. You
    ├── Read knowledge base (top-k relevant documents for the current query)
    ├── Read workflow memory (relevant procedural patterns)
    ├── Read entity memory (relevant named entities)
-   └── Assemble system prompt with all retrieved context
+   └── Assemble system prompt with all retrieved context  ← YOUR TODO 1
 
 2. TOOL SELECTION (programmatic)
    └── Retrieve relevant tools from TOOLBOX_MEMORY using the query as a search key
@@ -49,35 +105,24 @@ Part 6 contains no incomplete cells. The agent harness is fully implemented. You
 
 **Iteration cap:** `max_iterations=10` prevents infinite tool-call loops. If the agent has not resolved the task in 10 iterations, it returns whatever it has. Adjust this for complex tasks.
 
-**Context window tracking:** `context_size_history` is a list that persists across calls (it is defined outside `call_agent`). The chart in cell 84 reads from this list to show cumulative context growth.
+**Context window tracking:** `context_size_history` is a list that persists across calls. The chart after the agent calls reads from this list to show cumulative context growth across all 6 turns.
 
-**Programmatic vs agent-triggered boundary:** Notice that memory writes always happen (programmatic). Memory reads for knowledge, workflow, and entities happen programmatically at the start of each turn. Tool calls happen only when the model decides to invoke them.
-
-## Running the Agent
-
-Cell 83 runs a simple test:
-
-```python
-call_agent("What was my first question to you", thread_id="0022")
-```
-
-On the first call with thread `"0022"`, there is no prior conversation history — so the agent should say it has not spoken to you before. Call it a second time with the same `thread_id` to see memory working: it will recall the first question.
+**Programmatic vs agent-triggered boundary:** Memory writes always happen (programmatic). Memory reads for knowledge, workflow, and entities happen programmatically at the start of each turn. Tool calls happen only when the model decides to invoke them.
 
 ## The Naive Baseline Comparison
 
-Cell 86 implements `call_agent_naive()`. It is identical to `call_agent()` except it:
+After your 6-question sequence, the notebook runs `call_agent_naive()` — an identical agent except it:
 
 - Does not read or write any memory
 - Appends every message and tool result to a single growing list
 - Makes no attempt to manage context window size
 
-Cell 87 runs both agents through the same sequence of queries on isolated thread IDs.
+The comparison chart plots context token growth for both agents across the same queries. You should see:
 
-Cell 88 plots context token growth for both. You should see:
 - **Memory-engineered agent:** relatively flat or controlled growth due to summarisation and selective retrieval
 - **Naive agent:** continuous upward growth until it would eventually hit the token limit
 
-This chart is the clearest visual argument for why memory engineering matters. Screenshot it — it is good content for the #100DaysOfAgentMemory series.
+This chart is the clearest visual argument for why memory engineering matters. The more questions you ask in TODO 2, the more pronounced the difference will be.
 
 ## Key Takeaways
 

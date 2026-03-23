@@ -17,14 +17,18 @@ Oracle AI Database 23ai handles steps 2 and 3 natively. LangChain's `OracleVS` c
 The notebook uses `sentence-transformers/paraphrase-mpnet-base-v2`, a 768-dimensional sentence embedding model. It runs locally — no API key required. On first use it downloads ~420MB and caches it.
 
 ```python
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
 embedding_model = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-mpnet-base-v2"
 )
 ```
 
-## TODO: Initialise OracleVS
+> ⏳ **The first time this cell runs it downloads ~420MB.** This can take 2-5 minutes in Codespaces. The model is cached after the first download so subsequent runs are instant.
+
+---
+
+## Step 1 TODO: Initialise OracleVS
 
 `OracleVS` is a LangChain abstraction that manages a vector-enabled SQL table in Oracle. When you initialise it, it creates the table if it does not exist and connects the embedding model.
 
@@ -57,14 +61,45 @@ HNSW (Hierarchical Navigable Small World) is a graph-based approximate nearest-n
 
 The `safe_create_index` helper skips index creation if the index already exists, so you can safely re-run cells.
 
-## The Dataset
+---
 
-Part 2 loads 1,000 arXiv research paper abstracts from Hugging Face. Each paper is stored as a LangChain `Document` with:
+## Step 2 TODO: Dataset Ingestion — Append to the Three Lists
 
-- `page_content`: title + abstract text
-- `metadata`: `arxiv_id`, `primary_subject`, `authors`
+Inside the loop, three parallel lists need to be populated for each paper. They must stay in sync — index `i` in each list always refers to the same paper.
 
-## TODO: Basic Similarity Search
+**Why three separate lists?**
+
+- `texts` — the content that gets embedded into a vector. Only title and abstract go here — you want the vector to represent *meaning*, not metadata like IDs or author names.
+- `metadata` — the identifiers that come back when you search, so you know which paper matched.
+- `sampled_papers` — the full raw record kept for reuse elsewhere in the notebook (for example seeding the knowledge base memory in Part 3).
+
+**Complete solution:**
+
+```python
+    sampled_papers.append({
+        "arxiv_id": arxiv_id,
+        "title": title,
+        "abstract": abstract,
+        "primary_subject": primary_subject,
+        "authors": authors_text,
+    })
+    texts.append(text)
+    metadata.append({
+        "id": arxiv_id,
+        "arxiv_id": arxiv_id,
+        "title": title,
+        "primary_subject": primary_subject,
+        "authors": authors_text,
+    })
+```
+
+**What happens after the loop:** `vector_store.add_texts(texts=texts, metadatas=metadata)` passes all 200 texts through the HuggingFace embedding model and inserts each vector alongside its metadata into Oracle. After this cell completes, the `VECTOR_SEARCH_DEMO` table contains 200 rows — each a searchable research paper.
+
+> ⏳ **This cell takes 1-3 minutes.** The embedding model processes each paper and Oracle inserts 200 vectors. There is no progress bar — it will complete silently and print the confirmation message when done.
+
+---
+
+## Step 3 TODO: Basic Similarity Search
 
 **Complete solution:**
 
@@ -81,7 +116,9 @@ for i, doc in enumerate(results, start=1):
 
 `k=3` returns the 3 most similar documents. The query does not need to match any words in the documents — it finds papers whose *meaning* is closest to the query.
 
-## TODO: Search with Scores
+---
+
+## Step 4 TODO: Search with Scores
 
 **Complete solution:**
 
@@ -104,19 +141,31 @@ for doc, score in results:
 | 0.3 – 0.7 | Related |
 | 0.7+ | Weak or no match |
 
-## Filtered Search (Pre-built — Read Only)
+---
 
-Cells 35-38 demonstrate metadata filtering. These are complete in your notebook — read through them to understand how to combine semantic similarity with exact SQL-style filters.
+## Filtered Search
+
+The next two cells demonstrate metadata filtering — combining semantic similarity with exact SQL-style filters.
+
+The first cell (filter by subject) is pre-built. The second cell has a TODO for you to complete.
+
+**Pre-built — Filter by exact metadata value:**
 
 ```python
-# Filter by exact metadata value
 docs = vector_store.similarity_search(
     query,
     k=3,
     filter={"primary_subject": {"$eq": sample_primary_subject}},
 )
+```
 
-# Filter by ID list
+---
+
+## Step 5 TODO: Filter by ID List
+
+**Complete solution:**
+
+```python
 docs = vector_store.similarity_search(
     query="Explain key themes in this research paper",
     k=5,
@@ -124,12 +173,29 @@ docs = vector_store.similarity_search(
 )
 ```
 
+**What `$in` does:** restricts the search to documents whose `id` field appears in the provided list. Passing a single ID effectively pins the search to one specific paper. You could pass multiple IDs to restrict to a set: `{"id": {"$in": [id1, id2, id3]}}`.
+
+**Why this matters for agent memory:** an agent that remembers a specific paper from an earlier turn can retrieve it back into context using its ID — without writing a separate SQL query. The vector search pipeline handles both semantic retrieval and exact lookup through the same interface.
+
 This is one of Oracle's key advantages: metadata filtering runs as SQL predicates inside Oracle, not as a post-processing step in Python. It is fast and consistent.
+
+---
 
 ## Troubleshooting
 
 **Embedding model download hangs** — The model downloads on first use over the Codespaces network. If it stalls, interrupt the cell and re-run.
 
-**`ORA-00955: name is already used`** — An index already exists from a previous run. `safe_create_index` handles this automatically. If you see it elsewhere, the relevant table already exists — which is fine.
+**`ORA-51962: vector memory area is out of space`** — The Oracle vector memory pool is too small. Run this in the terminal then restart Oracle:
+```bash
+python3 -c "
+import oracledb
+conn = oracledb.connect(user='sys', password='OraclePwd_2025', dsn='localhost:1521/FREE', mode=oracledb.SYSDBA)
+conn.cursor().execute('ALTER SYSTEM SET vector_memory_size = 512M SCOPE=SPFILE')
+conn.commit(); conn.close()
+"
+docker restart oracle-free
+```
 
-**Empty search results** — You need to ingest the arXiv dataset (cells 28-29) before querying. Make sure those cells ran successfully.
+**`ORA-00955: name is already used`** — An index already exists from a previous run. `safe_create_index` handles this automatically.
+
+**Empty search results** — The dataset ingestion cell (Step 2) must complete successfully before querying. Check it printed the ✅ confirmation message.
