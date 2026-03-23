@@ -7,13 +7,13 @@ echo "============================================"
 # --- Guard: ensure oracledb is installed regardless of prebuild state ---
 python3 -c "import oracledb" > /dev/null 2>&1 || {
   echo ""
-  echo "[0/4] oracledb not found — installing now..."
+  echo "[0/3] oracledb not found — installing now..."
   pip install -q oracledb
 }
 
 # --- Step 1: Wait for Docker daemon ---
 echo ""
-echo "[1/4] Waiting for Docker daemon..."
+echo "[1/3] Waiting for Docker daemon..."
 for i in $(seq 1 15); do
   docker info > /dev/null 2>&1 && echo "  Docker is ready." && break \
     || { [ $i -lt 15 ] && echo "  Waiting for Docker... (attempt $i/15)" && sleep 3; }
@@ -21,13 +21,13 @@ done
 
 # --- Step 2: Start Oracle container ---
 echo ""
-echo "[2/4] Starting Oracle AI Database..."
+echo "[2/3] Starting Oracle AI Database..."
 docker compose -f .devcontainer/docker-compose.yml up -d oracle 2>/dev/null
 echo "  Container started."
 
-# --- Step 3: Wait for Oracle initial boot ---
+# --- Step 3: Wait for Oracle to be ready, then configure vector memory ---
 echo ""
-echo "[3/4] Waiting for Oracle to accept connections..."
+echo "[3/3] Waiting for Oracle to accept connections..."
 ORACLE_UP=0
 for i in $(seq 1 20); do
   python3 -c "
@@ -47,9 +47,8 @@ if [ $ORACLE_UP -eq 0 ]; then
   exit 1
 fi
 
-# --- Step 4: Set vector_memory_size via Python SYSDBA and restart ---
-echo ""
-echo "[4/4] Setting vector memory pool (1G) and restarting Oracle..."
+# Set vector_memory_size and restart Oracle to apply
+echo "  Setting vector_memory_size = 1G..."
 python3 << 'PYEOF'
 import oracledb, sys
 
@@ -60,37 +59,26 @@ try:
         dsn="localhost:1521/FREE",
         mode=oracledb.SYSDBA
     )
-    print("  Connected as SYSDBA to CDB root.")
-except Exception as e:
-    print(f"  ERROR: Could not connect as SYSDBA: {e}")
-    sys.exit(1)
-
-try:
     conn.cursor().execute("ALTER SYSTEM SET vector_memory_size = 1G SCOPE=SPFILE")
     conn.commit()
+    conn.close()
     print("  vector_memory_size = 1G written to SPFILE.")
 except Exception as e:
-    print(f"  ERROR setting vector_memory_size: {e}")
-    conn.close()
+    print(f"  ERROR: {e}")
     sys.exit(1)
-
-conn.close()
 PYEOF
 
-# Check if Python step succeeded
 if [ $? -ne 0 ]; then
-  echo "  ERROR: Failed to set vector_memory_size. Aborting restart."
+  echo "  ERROR: Failed to set vector_memory_size."
   exit 1
 fi
 
-# Restart Oracle container to apply SPFILE change
-echo "  Restarting Oracle container to apply SPFILE..."
+echo "  Restarting Oracle to apply SPFILE change..."
 docker restart oracle-free
 
-# Wait for Oracle to come back and verify
-echo "  Waiting for Oracle to come back online..."
+# Wait for Oracle to come back with vector_memory_size active
 ORACLE_READY=0
-for i in $(seq 1 15); do
+for i in $(seq 1 20); do
   python3 -c "
 import oracledb, sys
 try:
@@ -106,13 +94,11 @@ try:
     val = int(row[0]) if row else 0
     conn.close()
     if val > 0:
-        mb = val // (1024**2)
-        print(f'  vector_memory_size confirmed: {mb}M')
+        print(f'  vector_memory_size confirmed: {val // (1024**2)}M')
         sys.exit(0)
     else:
-        print('  WARNING: vector_memory_size is still 0.')
         sys.exit(2)
-except Exception as e:
+except:
     sys.exit(1)
 "
   RC=$?
@@ -123,24 +109,15 @@ except Exception as e:
     echo "  Oracle up but vector_memory_size still 0 — waiting 10s..."
     sleep 10
   else
-    echo "  Attempt $i/15 — waiting 10s..."
+    echo "  Attempt $i/20 — waiting 10s..."
     sleep 10
   fi
 done
 
 if [ $ORACLE_READY -eq 0 ]; then
   echo ""
-  echo "  ============================================"
-  echo "  WARNING: vector_memory_size not confirmed."
-  echo "  If HNSW index creation fails, run manually:"
-  echo ""
-  echo "  python3 -c \""
-  echo "  import oracledb"
-  echo "  conn = oracledb.connect(user='sys', password='OraclePwd_2025', dsn='localhost:1521/FREE', mode=oracledb.SYSDBA)"
-  echo "  conn.cursor().execute('ALTER SYSTEM SET vector_memory_size = 1G SCOPE=SPFILE')"
-  echo "  conn.commit(); conn.close()\""
-  echo "  docker restart oracle-free"
-  echo "  ============================================"
+  echo "  WARNING: vector_memory_size not confirmed after restart."
+  echo "  The notebook may fail on HNSW index creation."
 fi
 
 echo ""
