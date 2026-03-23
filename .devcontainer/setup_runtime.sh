@@ -36,62 +36,97 @@ except:
 done
 
 if [ $ORACLE_UP -eq 0 ]; then
-  echo "  ERROR: Oracle did not start in time. Run 'docker logs oracle-free' to diagnose."
+  echo "  ERROR: Oracle did not start. Run: docker logs oracle-free"
   exit 1
 fi
 
-# --- Step 4: Set vector_memory_size and restart ---
+# --- Step 4: Set vector_memory_size via Python SYSDBA and restart ---
 echo ""
 echo "[4/4] Setting vector memory pool (1G) and restarting Oracle..."
-docker exec oracle-free bash -c "
-sqlplus -s / as sysdba << 'SQLEOF'
-ALTER SYSTEM SET vector_memory_size = 1G SCOPE=SPFILE;
-SHUTDOWN IMMEDIATE;
-STARTUP;
-EXIT;
-SQLEOF
-"
+python3 << 'PYEOF'
+import oracledb, sys, time
 
-echo "  Waiting for Oracle to come back online after restart..."
+# Connect as SYSDBA to CDB root (FREE), not PDB
+try:
+    conn = oracledb.connect(
+        user="sys",
+        password="OraclePwd_2025",
+        dsn="localhost:1521/FREE",
+        mode=oracledb.SYSDBA
+    )
+    print("  Connected as SYSDBA to CDB root.")
+except Exception as e:
+    print(f"  ERROR: Could not connect as SYSDBA: {e}")
+    sys.exit(1)
+
+# Set vector_memory_size in SPFILE
+try:
+    conn.cursor().execute("ALTER SYSTEM SET vector_memory_size = 512M SCOPE=SPFILE")
+    conn.commit()
+    print("  vector_memory_size = 512M written to SPFILE.")
+except Exception as e:
+    print(f"  ERROR setting vector_memory_size: {e}")
+    conn.close()
+    sys.exit(1)
+
+conn.close()
+PYEOF
+
+# Restart Oracle container to apply SPFILE change
+echo "  Restarting Oracle container to apply SPFILE..."
+docker restart oracle-free
+
+# Wait for Oracle to come back
+echo "  Waiting for Oracle to come back online..."
 ORACLE_READY=0
 for i in $(seq 1 15); do
   python3 -c "
 import oracledb, sys
 try:
-    c = oracledb.connect(user='VECTOR', password='VectorPwd_2025', dsn='localhost:1521/FREEPDB1')
-    # Verify vector_memory_size is actually set
-    cur = c.cursor()
-    cur.execute(\"SELECT value FROM v\$parameter WHERE name = 'vector_memory_size'\")
+    conn = oracledb.connect(
+        user='sys',
+        password='OraclePwd_2025',
+        dsn='localhost:1521/FREE',
+        mode=oracledb.SYSDBA
+    )
+    cur = conn.cursor()
+    cur.execute(\"SELECT value FROM v\\\$parameter WHERE name = 'vector_memory_size'\")
     row = cur.fetchone()
     val = int(row[0]) if row else 0
-    c.close()
-    sys.exit(0 if val > 0 else 2)
+    conn.close()
+    if val > 0:
+        print(f'  vector_memory_size confirmed: {val} bytes ({val // (1024**3)}G)')
+        sys.exit(0)
+    else:
+        print('  WARNING: vector_memory_size is still 0.')
+        sys.exit(2)
 except Exception as e:
     sys.exit(1)
-" 
+"
   RC=$?
   if [ $RC -eq 0 ]; then
-    echo "  Oracle is ready. vector_memory_size confirmed set."
     ORACLE_READY=1
     break
   elif [ $RC -eq 2 ]; then
-    echo "  WARNING: Oracle is up but vector_memory_size is still 0. Retrying..."
+    echo "  Oracle up but vector_memory_size still 0 — waiting 10s..."
     sleep 10
   else
-    echo "  Attempt $i/15 — waiting 10s..." && sleep 10
+    echo "  Attempt $i/15 — waiting 10s..."
+    sleep 10
   fi
 done
 
 if [ $ORACLE_READY -eq 0 ]; then
   echo ""
-  echo "  WARNING: vector_memory_size may not be set correctly."
+  echo "  WARNING: vector_memory_size may not be set."
   echo "  Run this manually if HNSW index creation fails:"
   echo ""
-  echo "    docker exec oracle-free sqlplus / as sysdba"
-  echo "    ALTER SYSTEM SET vector_memory_size = 1G SCOPE=SPFILE;"
-  echo "    SHUTDOWN IMMEDIATE;"
-  echo "    STARTUP;"
-  echo "    EXIT;"
+  echo "    python3 -c \""
+  echo "    import oracledb"
+  echo "    conn = oracledb.connect(user='sys', password='OraclePwd_2025', dsn='localhost:1521/FREE', mode=oracledb.SYSDBA)"
+  echo "    conn.cursor().execute('ALTER SYSTEM SET vector_memory_size = 512M SCOPE=SPFILE')"
+  echo "    conn.commit(); conn.close()\""
+  echo "    docker restart oracle-free"
 fi
 
 echo ""
