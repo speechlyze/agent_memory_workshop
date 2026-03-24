@@ -13,7 +13,7 @@ python3 -c "import oracledb" > /dev/null 2>&1 || {
 
 # Wait for Docker daemon
 echo ""
-echo "[1/3] Waiting for Docker daemon..."
+echo "[1/4] Waiting for Docker daemon..."
 for i in $(seq 1 15); do
   docker info > /dev/null 2>&1 && echo "  Docker is ready." && break \
     || { [ $i -lt 15 ] && echo "  Waiting... (attempt $i/15)" && sleep 3; }
@@ -21,13 +21,13 @@ done
 
 # Start Oracle container
 echo ""
-echo "[2/3] Starting Oracle AI Database..."
+echo "[2/4] Starting Oracle AI Database..."
 docker compose -f .devcontainer/docker-compose.yml up -d oracle 2>/dev/null
 echo "  Container started."
 
 # Wait for Oracle initial boot
 echo ""
-echo "[3/3] Waiting for Oracle to accept connections (cold start — up to 5 min)..."
+echo "[3/4] Waiting for Oracle to accept connections (cold start — up to 5 min)..."
 ORACLE_UP=0
 for i in $(seq 1 30); do
   python3 -c "
@@ -49,64 +49,92 @@ if [ $ORACLE_UP -eq 0 ]; then
   exit 1
 fi
 
-# Set vector_memory_size immediately in memory (no restart needed)
+# Set vector_memory_size via SPFILE and restart Oracle
+# Oracle Free cannot dynamically resize SGA — SCOPE=BOTH/MEMORY set the parameter
+# but do NOT actually allocate Vector Memory Area. Only SPFILE + restart works.
 echo ""
-echo "Setting vector_memory_size = 1G..."
+echo "[4/4] Configuring vector_memory_size = 1G..."
 python3 << 'PYEOF'
-import oracledb, sys
+import oracledb, sys, subprocess, time
 
-try:
-    conn = oracledb.connect(
+def connect_sysdba():
+    return oracledb.connect(
         user="sys",
         password="OraclePwd_2025",
         dsn="localhost:1521/FREE",
         mode=oracledb.SYSDBA
     )
+
+def get_vector_memory(conn):
+    """Check actual SGA component allocation, not just parameter value."""
+    cur = conn.cursor()
+    # Check v$sga_dynamic_components for actual allocation
+    cur.execute("""
+        SELECT current_size FROM v$sga_dynamic_components
+        WHERE component = 'Vector Memory Area'
+    """)
+    row = cur.fetchone()
+    return int(row[0]) if row else 0
+
+try:
+    conn = connect_sysdba()
     print("  Connected as SYSDBA to CDB root.")
 except Exception as e:
     print(f"  ERROR: Could not connect as SYSDBA: {e}")
     sys.exit(1)
 
-cur = conn.cursor()
-
-# Check if already set
-cur.execute("SELECT value FROM v$parameter WHERE name = 'vector_memory_size'")
-row = cur.fetchone()
-current = int(row[0]) if row else 0
-
-if current >= 1073741824:
-    print(f"  vector_memory_size already set: {current // (1024**2)}M")
+# Check if Vector Memory Area is actually allocated in SGA
+actual_vma = get_vector_memory(conn)
+if actual_vma >= 1073741824:
+    print(f"  Vector Memory Area already allocated: {actual_vma // (1024**2)}M")
     conn.close()
     sys.exit(0)
 
-# SCOPE=BOTH sets in memory immediately AND persists to SPFILE
-# Fall back to SCOPE=MEMORY if BOTH fails
-for scope in ["BOTH", "MEMORY"]:
-    try:
-        cur.execute(f"ALTER SYSTEM SET vector_memory_size = 1G SCOPE={scope}")
-        conn.commit()
-        print(f"  vector_memory_size = 1G applied (SCOPE={scope})")
-        break
-    except Exception as e:
-        print(f"  SCOPE={scope} failed: {e}")
-        if scope == "MEMORY":
-            conn.close()
-            sys.exit(1)
+print(f"  Vector Memory Area current size: {actual_vma // (1024**2)}M — needs SPFILE + restart")
 
-# Verify
-cur.execute("SELECT value FROM v$parameter WHERE name = 'vector_memory_size'")
-val = int(cur.fetchone()[0])
+# Write to SPFILE (takes effect on restart)
+cur = conn.cursor()
+try:
+    cur.execute("ALTER SYSTEM SET vector_memory_size = 1G SCOPE=SPFILE")
+    conn.commit()
+    print("  Written vector_memory_size = 1G to SPFILE")
+except Exception as e:
+    print(f"  ERROR setting SPFILE: {e}")
+    conn.close()
+    sys.exit(1)
+
 conn.close()
 
-if val > 0:
-    print(f"  Confirmed: vector_memory_size = {val // (1024**2)}M")
-else:
-    print("  ERROR: vector_memory_size is still 0")
+# Restart Oracle container so it reads the SPFILE and allocates SGA memory
+print("  Restarting Oracle container to apply SPFILE changes...")
+result = subprocess.run(["docker", "restart", "oracle-free"], capture_output=True, text=True)
+if result.returncode != 0:
+    print(f"  ERROR: docker restart failed: {result.stderr}")
     sys.exit(1)
+
+# Wait for Oracle to come back up after restart
+print("  Waiting for Oracle to restart...")
+for attempt in range(1, 31):
+    time.sleep(10)
+    try:
+        conn = connect_sysdba()
+        actual_vma = get_vector_memory(conn)
+        conn.close()
+        if actual_vma >= 1073741824:
+            print(f"  Confirmed: Vector Memory Area = {actual_vma // (1024**2)}M (allocated in SGA)")
+            sys.exit(0)
+        else:
+            print(f"  Oracle is up but VMA = {actual_vma // (1024**2)}M — waiting...")
+    except Exception:
+        if attempt % 5 == 0:
+            print(f"  Attempt {attempt}/30 — Oracle not ready yet...")
+
+print("  ERROR: Vector Memory Area not allocated after restart")
+sys.exit(1)
 PYEOF
 
 if [ $? -ne 0 ]; then
-  echo "  ERROR: Failed to set vector_memory_size."
+  echo "  ERROR: Failed to configure vector_memory_size."
   exit 1
 fi
 
