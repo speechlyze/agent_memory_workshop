@@ -1,4 +1,4 @@
-# Part 2: Vector Search with LangChain OracleVS
+# Part 2: Vector Search With Langchain and Oracle AI Database
 
 ## What Is Vector Search?
 
@@ -10,7 +10,7 @@ The process is:
 2. Store vectors in a vector-enabled SQL table
 3. At query time, embed the query and find stored vectors with the smallest distance
 
-Oracle AI Database 23ai handles steps 2 and 3 natively. LangChain's `OracleVS` class handles the Python interface.
+Oracle AI Database handles steps 2 and 3 natively. LangChain's `OracleVS` class handles the Python interface.
 
 ## The Embedding Model
 
@@ -28,7 +28,7 @@ embedding_model = HuggingFaceEmbeddings(
 
 ---
 
-## Step 1 TODO: Initialise OracleVS
+## TODO 1: Initialise OracleVS
 
 `OracleVS` is a LangChain abstraction that manages a vector-enabled SQL table in Oracle. When you initialise it, it creates the table if it does not exist and connects the embedding model.
 
@@ -63,7 +63,7 @@ The `safe_create_index` helper skips index creation if the index already exists,
 
 ---
 
-## Step 2 TODO: Dataset Ingestion — Append to the Three Lists
+## TODO 2: Dataset Ingestion — Append to the Three Lists
 
 Inside the loop, three parallel lists need to be populated for each paper. They must stay in sync — index `i` in each list always refers to the same paper.
 
@@ -99,7 +99,7 @@ Inside the loop, three parallel lists need to be populated for each paper. They 
 
 ---
 
-## Step 3 TODO: Basic Similarity Search
+## TODO 3: Basic Similarity Search
 
 **Complete solution:**
 
@@ -118,7 +118,7 @@ for i, doc in enumerate(results, start=1):
 
 ---
 
-## Step 4 TODO: Search with Scores
+## TODO 4: Similarity Search with Relevance Scores
 
 **Complete solution:**
 
@@ -134,16 +134,18 @@ for doc, score in results:
 
 **Score interpretation:** OracleVS returns cosine distance. The range is 0.0 to 2.0. Lower is better:
 
-| Score | Meaning |
-|---|---|
-| 0.0 | Identical meaning |
-| 0.0 – 0.3 | Highly relevant |
-| 0.3 – 0.7 | Related |
-| 0.7+ | Weak or no match |
+
+| Score     | Meaning           |
+| --------- | ----------------- |
+| 0.0       | Identical meaning |
+| 0.0 – 0.3 | Highly relevant   |
+| 0.3 – 0.7 | Related           |
+| 0.7+      | Weak or no match  |
+
 
 ---
 
-## Filtered Search
+## Filtered Similarity Search
 
 The next two cells demonstrate metadata filtering — combining semantic similarity with exact SQL-style filters.
 
@@ -161,7 +163,7 @@ docs = vector_store.similarity_search(
 
 ---
 
-## Step 5 TODO: Filter by ID List
+## TODO 5: Filter by id list ($in)
 
 **Complete solution:**
 
@@ -185,7 +187,8 @@ This is one of Oracle's key advantages: metadata filtering runs as SQL predicate
 
 **Embedding model download hangs** — The model downloads on first use over the Codespaces network. If it stalls, interrupt the cell and re-run.
 
-**`ORA-51962: vector memory area is out of space`** — The Oracle vector memory pool is too small. Run this in the terminal then restart Oracle:
+`**ORA-51962: vector memory area is out of space`** — The Oracle vector memory pool is too small. Run this in the terminal then restart Oracle:
+
 ```bash
 python3 -c "
 import oracledb
@@ -196,6 +199,6 @@ conn.commit(); conn.close()
 docker restart oracle-free
 ```
 
-**`ORA-00955: name is already used`** — An index already exists from a previous run. `safe_create_index` handles this automatically.
+`**ORA-00955: name is already used**` — An index already exists from a previous run. `safe_create_index` handles this automatically.
 
 **Empty search results** — The dataset ingestion cell (Step 2) must complete successfully before querying. Check it printed the ✅ confirmation message.

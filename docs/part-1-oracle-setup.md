@@ -1,8 +1,8 @@
-# Part 1: Oracle AI Database 23ai Setup
+# Part 1: Oracle AI Database Setup [Memory Core]
 
 ## What You Are Working With
 
-Oracle AI Database 23ai is not a separate AI product — it is the core Oracle Database engine with native support for:
+Oracle AI Database is not a separate AI product — it is the core Oracle Database engine with native support for:
 
 - **`VECTOR` column type** — stores embeddings as first-class SQL values
 - **HNSW indexes** — approximate nearest-neighbour search directly in SQL
@@ -12,7 +12,7 @@ This means your agent memory lives in a single, queryable, ACID-compliant databa
 
 ## Your Environment
 
-In this Codespace, Oracle AI Database 23ai is already running as a Docker service (`gvenzl/oracle-free:23-slim`). The service starts automatically and passes a healthcheck before your development container boots.
+In this Codespace, Oracle AI Database is already running as a Docker service (`gvenzl/oracle-free`). The service starts automatically and passes a healthcheck before your development container boots.
 
 | Setting | Value |
 |---|---|
@@ -25,7 +25,9 @@ In this Codespace, Oracle AI Database 23ai is already running as a Docker servic
 
 You will connect as the `VECTOR` user for all workshop tasks. This is a dedicated schema for storing embeddings and agent memory — it follows the principle of least privilege rather than connecting as SYS.
 
-## TODO: Implement `connect_to_oracle`
+## Reference: `connect_to_oracle`
+
+This function is pre-built in the student notebook — just run the cell. The explanation below is for reference.
 
 **Why retry logic?** Docker healthchecks verify the container is running, but Oracle's listener can take a few extra seconds to become fully ready after the healthcheck passes. A retry loop makes the connection resilient to this transient window.
 

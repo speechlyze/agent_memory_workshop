@@ -4,6 +4,8 @@
 
 An LLM has no persistent state between calls. Every inference starts from scratch. Agent memory is the infrastructure that gives agents the ability to remember across turns, sessions, and tasks.
 
+![Classification of Agent Memory](../images/agent_memory_classification.png)
+
 The key insight is that different types of information need different storage and retrieval strategies:
 
 | Memory Type | What It Stores | Storage | Retrieval |
@@ -20,13 +22,13 @@ The key insight is that different types of information need different storage an
 
 **All semantic memory types use vector-enabled tables** because you need relevance-ranked retrieval — you never retrieve the entire knowledge base, only what is relevant to the current query.
 
-## TODO: `create_conversational_history_table`
+## TODO 6: `create_conversational_history_table`
 
 This function creates the SQL table that stores chat history. Each row is one message turn.
 
 **Why `SYS_GUID()`?** Oracle's built-in UUID generator. It creates a globally unique ID for each row without requiring a sequence or application-side ID generation.
 
-**Why `TIMESTAMP WITH TIME ZONE`?** Agents may run across time zones. Storing timezone-aware timestamps avoids ambiguity when ordering or filtering by time.
+**Why `summary_id`?** When conversation messages are summarised and offloaded in Part 4, this column links each original message to its summary. Without it, the agent cannot track which messages have been compacted or retrieve the original conversation from a summary reference.
 
 **Complete solution:**
 
@@ -42,21 +44,35 @@ def create_conversational_history_table(conn, table_name: str = "CONVERSATIONAL_
             CREATE TABLE {table_name} (
                 id          VARCHAR2(100) DEFAULT SYS_GUID() PRIMARY KEY,
                 thread_id   VARCHAR2(100) NOT NULL,
-                role        VARCHAR2(20)  NOT NULL,
-                content     CLOB,
-                created_at  TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP
+                role        VARCHAR2(50)  NOT NULL,
+                content     CLOB NOT NULL,
+                timestamp   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                metadata    CLOB,
+                created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                summary_id  VARCHAR2(100) DEFAULT NULL
             )
         """)
+
+        cur.execute(f"""
+            CREATE INDEX idx_{table_name.lower()}_thread_id ON {table_name}(thread_id)
+        """)
+
+        cur.execute(f"""
+            CREATE INDEX idx_{table_name.lower()}_timestamp ON {table_name}(timestamp)
+        """)
+
     conn.commit()
-    print(f"Created table: {table_name}")
+    print(f"Table {table_name} created successfully with indexes")
     return table_name
 ```
 
-**Why `role VARCHAR2(20)`?** Stores `"user"`, `"assistant"`, or `"tool"`. 20 characters is sufficient.
+**Why `role VARCHAR2(50)`?** Stores `"user"`, `"assistant"`, or `"tool"`. 50 characters provides headroom for future role types.
 
 **Why `CLOB` for content?** Messages can be long — tool outputs especially. `CLOB` (Character Large Object) stores up to 4GB of text. `VARCHAR2` maxes out at 32KB in Oracle.
 
-## TODO: Initialise the 5 Vector Memory Stores
+**Why indexes?** The `thread_id` index speeds up all per-thread lookups (every read and write is scoped by thread). The `timestamp` index speeds up ordering, which is used on every conversation retrieval.
+
+## TODO 7: Initialise the 5 Vector Memory Stores
 
 Each semantic memory type gets its own `OracleVS` instance backed by its own vector-enabled SQL table. This separation gives you:
 
@@ -105,7 +121,7 @@ summary_vs = OracleVS(
 
 ## The MemoryManager Class (Pre-built — Read Carefully)
 
-Cell 58 contains the `MemoryManager` class. This is provided complete — you do not need to modify it. But read through it, because understanding how it works is central to the workshop.
+The `MemoryManager` class is provided in the next code cell after the guard assertions. It is provided complete — you do not need to modify it. But read through it, because understanding how it works is central to the workshop.
 
 Key methods to understand:
 
@@ -123,7 +139,7 @@ Key methods to understand:
 
 ## Programmatic vs Agent-Triggered Operations
 
-This is the most important design decision in memory engineering. Read cell 54 carefully.
+This is the most important design decision in memory engineering. Read the "Programmatic vs Agent-Triggered Operations" section carefully.
 
 **Programmatic (always runs, harness controls it):**
 - Writing conversation turns after each message
@@ -150,13 +166,13 @@ Getting this boundary wrong in either direction causes problems:
 
 ---
 
-## MemoryManager TODO Methods
+## MemoryManager TODOs (8–11)
 
 The `MemoryManager` class has four methods left for you to implement. Each one teaches a different pattern — SQL insert, vector add, structured vector add with metadata, and direct entity storage.
 
 ---
 
-### TODO 1: `write_conversational_memory` — SQL INSERT
+### TODO 8: `write_conversational_memory` — SQL INSERT
 
 This is the foundational SQL write. Every user and assistant message gets written here programmatically on each turn.
 
@@ -179,7 +195,7 @@ def write_conversational_memory(self, content: str, role: str, thread_id: str) -
 
 ---
 
-### TODO 2: `write_knowledge_base` — Vector Add
+### TODO 9: `write_knowledge_base` — Vector Add
 
 This is the simplest vector write — pass text and metadata directly to OracleVS which handles embedding and insertion.
 
@@ -192,7 +208,7 @@ def write_knowledge_base(self, text: str, metadata: dict):
 
 ---
 
-### TODO 3: `write_workflow` — Structured Vector Add
+### TODO 10: `write_workflow` — Structured Vector Add
 
 Workflow memory requires structuring the data before storing it — the steps list needs formatting and the metadata needs computing before the vector write.
 
@@ -213,7 +229,7 @@ def write_workflow(self, query: str, steps: list, final_answer: str, success: bo
 
 ---
 
-### TODO 4: `write_entity` — Direct Entity Storage
+### TODO 11: `write_entity` — Direct Entity Storage
 
 The direct storage branch (no LLM extraction) stores a single named entity as a vector alongside its metadata.
 

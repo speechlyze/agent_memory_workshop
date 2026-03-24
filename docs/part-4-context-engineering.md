@@ -32,7 +32,7 @@ Your context on each call consumes some of that budget across:
 
 The remaining budget is available for the model's response. Good context engineering keeps each component proportional and prunes aggressively when you approach the limit.
 
-## TODO: `calculate_context_usage`
+## TODO 12: `calculate_context_usage`
 
 This function estimates how much of the context budget is used and returns a percentage. It is called inside the agent harness on each iteration to trigger summarisation when the context gets too large.
 
@@ -62,7 +62,7 @@ if usage["percent"] > 80:
 
 ## Context Summarisation and Offloading (Pre-built — Read Carefully)
 
-Cells 69 and 70 contain `summarise_context_window` and `offload_to_summary`. These are provided complete. Read them to understand the pattern.
+The code cells following the TODO contain `summarise_context_window` and `offload_to_summary`. These are provided complete. Read them to understand the pattern.
 
 **`summarise_context_window`** calls the LLM to compress a block of context into a summary, stores the summary in `SUMMARY_MEMORY`, and returns a reference ID.
 
@@ -85,7 +85,7 @@ This is the key advantage of using a database for memory: the content is always 
 
 ## The Context Growth Chart
 
-Cell 84 plots context window usage across agent iterations. After completing the workshop, compare the chart for the memory-engineered agent (Part 6 Step 1) versus the naive agent (Part 6 Step 2). The difference will be visible as a flat line versus a continuously growing line.
+The plotting cell at the end of Part 6 shows context window usage across agent iterations. After completing the workshop, compare the chart for the memory-engineered agent (Part 6 Step 1) versus the naive agent (Part 6 Step 2). The difference will be visible as a flat line versus a continuously growing line.
 
 ## Troubleshooting
 
@@ -95,7 +95,7 @@ Cell 84 plots context window usage across agent iterations. After completing the
 
 ---
 
-## TODO: Write the Summarisation Prompt
+## TODO 13: Write the Summarisation Prompt
 
 This is the most open-ended TODO in the workshop. The prompt you write directly determines the quality of what gets stored in summary memory — and therefore what the agent can recall later.
 

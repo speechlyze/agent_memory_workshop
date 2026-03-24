@@ -8,7 +8,7 @@
 
 ## What You Will Build
 
-A complete agent memory system with all major memory types, a `MemoryManager` abstraction over Oracle AI Database, context engineering techniques that prevent context window overflow, and a turn-level agent harness — finishing with a before/after comparison that makes the impact of memory engineering visible.
+A **Research Paper Assistant** — an AI agent that searches, retrieves, and reasons over arxiv papers stored as vectors in Oracle AI Database. Along the way you'll implement a `MemoryManager` with six memory types, context engineering techniques that prevent context window overflow, and a turn-level agent harness — finishing with a before/after comparison that makes the impact of memory engineering visible.
 
 ## Workshop Parts
 
@@ -20,6 +20,8 @@ A complete agent memory system with all major memory types, a `MemoryManager` ab
 | 4 | Context engineering: summarisation and offloading | [Part 4 Guide](docs/part-4-context-engineering.md) |
 | 5 | Web access with Tavily | [Part 5 Guide](docs/part-5-web-search.md) |
 | 6 | Agent execution and memory vs no-memory comparison | [Part 6 Guide](docs/part-6-agent-execution.md) |
+
+> **[TODO Checklist](docs/TODO-checklist.md)** — all 16 tasks at a glance with links to their guide sections.
 
 ## Getting Started
 
@@ -61,8 +63,7 @@ A complete agent memory system with all major memory types, a `MemoryManager` ab
 
 You will need:
 - A GitHub account (free)
-- An OpenAI API key
-- A Tavily API key (free at [tavily.com](https://tavily.com))
+- API keys (`OPENAI_API_KEY` and `TAVILY_API_KEY`) are pre-configured as Codespace environment variables — no manual setup required
 
 > **Note:** On subsequent Codespace opens, Oracle should start automatically via `postStartCommand`. If you ever see a connection error in the notebook, run step 3 above again from the terminal.
 
@@ -107,12 +108,18 @@ agent-memory-workshop/
 
 ## Stack
 
-- Oracle AI Database via `gvenzl/oracle-free:23-slim`
+- Oracle AI Database via `gvenzl/oracle-free`
 - `langchain-oracledb` — LangChain integration for Oracle vector store
 - `sentence-transformers` — local embedding model, no API key needed
 - `langchain-openai` — OpenAI LLM integration
 - `tavily-python` — web search for agents
 - `oracledb` — Python Oracle driver
+
+## Where to Next?
+
+- **[Agent Memory: Building Memory-Aware Agents](https://www.deeplearning.ai/short-courses/agent-memory-building-memory-aware-agents/)** — DeepLearning.AI short course for deeper exploration of agent memory patterns
+- **[Oracle AI Developer Hub](https://github.com/oracle-devrel/oracle-ai-developer-hub)** — More technical assets, samples, and projects with Oracle AI
+- **[Oracle Developer Resource](https://www.oracle.com/developer/)** — Documentation, tools, and community for Oracle developers
 
 ---
 

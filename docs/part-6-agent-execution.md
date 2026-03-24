@@ -2,11 +2,11 @@
 
 ## Two TODOs in This Part
 
-Part 6 has two TODOs — both inside `call_agent()`. Complete them in order before running the agent.
+Part 6 has two TODOs. Complete them in order before running the agent.
 
 ---
 
-## TODO 1: `build_context()`
+## TODO 15: `build_context()`
 
 This is the most important function in the entire workshop. It assembles everything you built across Parts 1-5 into a single string that gets sent to the LLM on every inference call.
 
@@ -29,7 +29,7 @@ def build_context() -> str:
 
 ---
 
-## TODO 2: Five Questions Before the Memory Recall Test
+## TODO 16: Five Questions Before the Memory Recall Test
 
 The final test cell asks the agent `"What was my first question to you"`. For this to work, the agent needs prior conversational memory to recall — which means you need to ask it questions first.
 
@@ -74,7 +74,7 @@ The agent should correctly recall your first question. If it cannot, check that 
    ├── Read knowledge base (top-k relevant documents for the current query)
    ├── Read workflow memory (relevant procedural patterns)
    ├── Read entity memory (relevant named entities)
-   └── Assemble system prompt with all retrieved context  ← YOUR TODO 1
+   └── Assemble system prompt with all retrieved context  ← YOUR TODO 16
 
 2. TOOL SELECTION (programmatic)
    └── Retrieve relevant tools from TOOLBOX_MEMORY using the query as a search key
@@ -122,7 +122,7 @@ The comparison chart plots context token growth for both agents across the same 
 - **Memory-engineered agent:** relatively flat or controlled growth due to summarisation and selective retrieval
 - **Naive agent:** continuous upward growth until it would eventually hit the token limit
 
-This chart is the clearest visual argument for why memory engineering matters. The more questions you ask in TODO 2, the more pronounced the difference will be.
+This chart is the clearest visual argument for why memory engineering matters. The more questions you ask in TODO 16, the more pronounced the difference will be.
 
 ## Key Takeaways
 

@@ -10,15 +10,11 @@ Tavily is an AI-optimised search API. Unlike general search APIs that return raw
 - Lower token cost per search result
 - Content that is already structured for reading, not for web rendering
 
-## Getting Your Tavily API Key
+## Tavily API Key
 
-1. Go to [tavily.com](https://tavily.com) and create a free account
-2. Copy your API key from the dashboard
-3. When the notebook cell prompts `Tavily API Key:`, paste it in
+Your `TAVILY_API_KEY` is pre-configured as a Codespace environment variable — no manual setup required. The notebook loads it automatically via `os.environ.get("TAVILY_API_KEY")`.
 
-The free tier provides 1,000 searches per month — more than enough for this workshop.
-
-## TODO: Register `web_search` as a Tool
+## TODO 14: Register `search_tavily` as a Tool
 
 The `@toolbox.register_tool(augment=True)` decorator does two things:
 
@@ -27,45 +23,44 @@ The `@toolbox.register_tool(augment=True)` decorator does two things:
 
 **The docstring matters.** It is what the agent reads to decide whether to call this tool. Write it as if you are explaining to the agent when and why to use it.
 
+**Important:** The function **must** be named `search_tavily` — the agent harness references this name to trigger a context refresh after web searches.
+
 **Complete solution:**
 
 ```python
 from tavily import TavilyClient
 from datetime import datetime
 
-tavily_client = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
+tavily_client = TavilyClient(api_key=tavily_api_key)
 
 @toolbox.register_tool(augment=True)
-def web_search(query: str) -> str:
+def search_tavily(query: str, max_results: int = 5):
     """
-    Search the internet for current information.
-
-    Use this tool when the user asks about:
-    - Recent events or news that may have occurred after your training cutoff
-    - Current prices, statistics, or data that changes over time
-    - Specific facts you are not confident about
-    - Any topic requiring up-to-date information
-
-    Args:
-        query: A clear, specific search query string
-
-    Returns:
-        Formatted search results with title, URL, and content for each result
+    Use this function to search the web and store the results in the knowledge base.
     """
-    results = tavily_client.search(query=query, max_results=5)
-    formatted = []
-    for r in results.get("results", []):
-        formatted.append(
-            f"Title: {r.get('title', '')}\n"
-            f"URL: {r.get('url', '')}\n"
-            f"Content: {r.get('content', '')}"
-        )
-    return "\n\n---\n\n".join(formatted)
+    response = tavily_client.search(query=query, max_results=max_results)
+    results = response.get("results", [])
+
+    for result in results:
+        text = f"Title: {result.get('title', '')}\nContent: {result.get('content', '')}\nURL: {result.get('url', '')}"
+        metadata = {
+            "title": result.get("title", ""),
+            "url": result.get("url", ""),
+            "score": result.get("score", 0),
+            "source_type": "tavily_search",
+            "query": query,
+            "timestamp": datetime.now().isoformat()
+        }
+        memory_manager.write_knowledge_base(text, metadata)
+
+    return results
 ```
+
+**Why it writes to the knowledge base:** Unlike a simple search that returns and forgets, this tool persists every result into `SEMANTIC_MEMORY`. On future turns, the agent can retrieve these results via `read_knowledge_base` without searching again — the web content becomes part of the agent's long-term memory.
 
 ## How Tool Registration Works
 
-After registering the tool, cell 77 demonstrates semantic tool retrieval:
+After registering the tool, the next cell demonstrates semantic tool retrieval:
 
 ```python
 retrieved_tools = memory_manager.read_toolbox("Search the internet")
@@ -81,8 +76,8 @@ The `augment` parameter controls whether the tool's description is stored in mem
 
 ## Troubleshooting
 
-**`AuthenticationError` from Tavily** — Your API key is incorrect or was not set. Re-run cell 75 (`set_env_securely`) and paste the key carefully.
+**`AuthenticationError` from Tavily** — Your API key is incorrect or not set. Verify the `TAVILY_API_KEY` environment variable is configured in your Codespace repo settings.
 
-**`KeyError: TAVILY_API_KEY`** — Cell 75 did not run. `os.environ["TAVILY_API_KEY"]` will raise if the key is not set. Run cell 75 first.
+**`AssertionError: TAVILY_API_KEY not set`** — The environment variable is missing. Check your Codespace repo settings and rebuild if needed.
 
 **Empty results** — Tavily free tier has rate limits. Wait a moment and retry.
