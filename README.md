@@ -119,6 +119,10 @@ agent-memory-workshop/
 - `tavily-python` — web search for agents
 - `oracledb` — Python Oracle driver
 
+## Presentation Slides
+
+A PDF version of the workshop presentation is available at [`docs/agent_memory_presentation.pdf`](docs/agent_memory_presentation.pdf) for learners who want to follow along or review the material offline.
+
 ## Where to Next?
 
 - **[Agent Memory: Building Memory-Aware Agents](https://www.deeplearning.ai/short-courses/agent-memory-building-memory-aware-agents/)** — DeepLearning.AI short course for deeper exploration of agent memory patterns
