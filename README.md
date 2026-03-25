@@ -28,11 +28,15 @@ A **Research Paper Assistant** — an AI agent that searches, retrieves, and rea
 ### Option A: GitHub Codespaces (recommended for the workshop)
 
 1. Click the **Open in GitHub Codespaces** badge above
-2. Wait for the environment to build (~3-5 minutes)
+2. Click the **Create Codespace** button to launch your environment
+
+   ![Create Codespace](images/codespaces_creation.png)
+
+3. Wait for the environment to build (~3-5 minutes)
 
    ![Codespace startup](images/codespace_startup.png)
 
-3. Once the terminal prompt appears, start Oracle AI Database:
+4. Once the terminal prompt appears, start Oracle AI Database:
 
    > **Tip:** If your browser prompts you to allow clipboard pasting, click **Allow** so you can paste commands into the terminal.
 
@@ -42,7 +46,7 @@ A **Research Paper Assistant** — an AI agent that searches, retrieves, and rea
 
    ![Oracle getting pulled](images/oracle_getting_pulled.png)
 
-4. Wait for Oracle to become healthy (~60-90 seconds), then verify:
+5. Wait for Oracle to become healthy (~60-90 seconds), then verify:
    ```bash
    docker ps
    ```
@@ -50,16 +54,16 @@ A **Research Paper Assistant** — an AI agent that searches, retrieves, and rea
 
    ![Oracle ready](images/oracle_ready.png)
 
-5. Confirm the Python connection works:
+6. Confirm the Python connection works:
    ```bash
    python3 -c "import oracledb; c = oracledb.connect(user='VECTOR', password='VectorPwd_2025', dsn='localhost:1521/FREEPDB1'); print('Connected. Oracle version:', c.version); c.close()"
    ```
 
    ![Database ready](images/database_ready.png)
 
-6. Open [`workshop/notebook_student.ipynb`](workshop/notebook_student.ipynb) in the file explorer
-7. Select the **Python 3** kernel from the top-right kernel picker
-8. Follow the notebook cells top to bottom, using the part guides in `docs/` when you hit a TODO
+7. Open [`workshop/notebook_student.ipynb`](workshop/notebook_student.ipynb) in the file explorer
+8. Select the **Python 3** kernel from the top-right kernel picker
+9. Follow the notebook cells top to bottom, using the part guides in `docs/` when you hit a TODO
 
 You will need:
 - A GitHub account (free)
