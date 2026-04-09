@@ -94,9 +94,13 @@ Wait approximately 2 minutes for Oracle to initialise before running notebook ce
 ```
 agent-memory-workshop/
 ├── .devcontainer/
-│   ├── devcontainer.json     Codespaces configuration
-│   ├── docker-compose.yml    Oracle AI Database + workshop container
-│   └── setup.sh              Dependency installation and Oracle health check
+│   ├── devcontainer.json        Codespaces configuration
+│   ├── docker-compose.yml       Oracle AI Database + workshop container
+│   ├── setup_build.sh           Build-time dependency installation
+│   ├── setup_runtime.sh         Runtime Oracle health check and setup
+│   ├── start_oracle.sh          Oracle startup script
+│   └── oracle-init/
+│       └── 01_vector_memory.sql Vector memory schema init
 ├── workshop/
 │   ├── notebook_student.ipynb   Your working notebook (contains TODO gaps)
 │   └── notebook_complete.ipynb  Complete reference (do not open until done)
@@ -106,7 +110,11 @@ agent-memory-workshop/
 │   ├── part-3-memory-engineering.md
 │   ├── part-4-context-engineering.md
 │   ├── part-5-web-search.md
-│   └── part-6-agent-execution.md
+│   ├── part-6-agent-execution.md
+│   ├── TODO-checklist.md        All 16 tasks at a glance
+│   ├── troubleshooting.md       Common issues and solutions
+│   └── agent_memory_presentation.pdf
+├── images/                      Screenshots and architecture diagrams
 └── README.md
 ```
 

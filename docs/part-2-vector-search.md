@@ -187,16 +187,15 @@ This is one of Oracle's key advantages: metadata filtering runs as SQL predicate
 
 **Embedding model download hangs** — The model downloads on first use over the Codespaces network. If it stalls, interrupt the cell and re-run.
 
-`**ORA-51962: vector memory area is out of space`** — The Oracle vector memory pool is too small. Run this in the terminal then restart Oracle:
+`**ORA-51962: vector memory area is out of space`** — The Oracle vector memory pool is too small. Run this in the terminal (no restart needed):
 
 ```bash
 python3 -c "
 import oracledb
 conn = oracledb.connect(user='sys', password='OraclePwd_2025', dsn='localhost:1521/FREE', mode=oracledb.SYSDBA)
-conn.cursor().execute('ALTER SYSTEM SET vector_memory_size = 512M SCOPE=SPFILE')
+conn.cursor().execute('ALTER SYSTEM SET vector_memory_size = 1G SCOPE=BOTH')
 conn.commit(); conn.close()
 "
-docker restart oracle-free
 ```
 
 `**ORA-00955: name is already used**` — An index already exists from a previous run. `safe_create_index` handles this automatically.

@@ -41,7 +41,7 @@ This function estimates how much of the context budget is used and returns a per
 **Complete solution:**
 
 ```python
-def calculate_context_usage(context: str, model: str = "gpt-5") -> dict:
+def calculate_context_usage(context: str, model: str = "gpt-5-mini") -> dict:
     """Calculate context window usage as a percentage."""
     estimated_tokens = len(context) // 4
     max_tokens = MODEL_TOKEN_LIMITS.get(model, 128000)

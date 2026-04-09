@@ -179,7 +179,7 @@ pip install -q langchain-oracledb langchain-huggingface langchain-openai
 
 **Symptom:** The `HuggingFaceEmbeddings` cell hangs for several minutes on first run.
 
-**Cause:** The `sentence-transformers` model is being downloaded from HuggingFace on first use. This is a ~90MB download.
+**Cause:** The `sentence-transformers` model is being downloaded from HuggingFace on first use. This is a ~420MB download.
 
 **Fix:** This is expected on first run. Wait for the download to complete — it will be cached for all subsequent cells. Do not interrupt the cell.
 
