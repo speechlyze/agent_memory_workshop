@@ -1,7 +1,9 @@
+# CPU-only PyTorch (prevents 5GB CUDA download in Codespaces)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
 langchain-oracledb
 langchain-community
 langchain-huggingface
-langchain-openai
 langchain
 sentence-transformers
 oracledb
