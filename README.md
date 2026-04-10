@@ -62,12 +62,21 @@ A **Research Paper Assistant** — an AI agent that searches, retrieves, and rea
    ![Database ready](images/database_ready.png)
 
 7. Open [`workshop/notebook_student.ipynb`](workshop/notebook_student.ipynb) in the file explorer
-8. Select the **Python 3** kernel from the top-right kernel picker
-9. Follow the notebook cells top to bottom, using the part guides in `docs/` when you hit a TODO
+8. Select the **Python 3.11** kernel:
 
-You will need:
-- A GitHub account (free)
-- API keys (`OCI_GENAI_API_KEY` and `TAVILY_API_KEY`) are pre-configured as Codespace environment variables — no manual setup required
+   Click **Select Kernel** in the top-right corner of the notebook:
+
+   ![Select Kernel](images/select_kernel.png)
+
+   Choose **Python 3.11** from the list:
+
+   ![Select Python 3.11](images/select_kernel_python_3.11.png)
+
+   Confirm it shows as selected:
+
+   ![Kernel Selected](images/ensure_kernel_selected.png)
+
+9. Follow the notebook cells top to bottom, using the part guides in `docs/` when you hit a TODO
 
 > **Note:** On subsequent Codespace opens, Oracle should start automatically via `postStartCommand`. If you ever see a connection error in the notebook, run step 3 above again from the terminal.
 
